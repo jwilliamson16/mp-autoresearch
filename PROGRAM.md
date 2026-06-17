@@ -78,22 +78,44 @@ The baseline (DoG + RF) reflects current lab practice, not a known optimum.
 - Modify `results.tsv` except to append rows.
 - Use the test data during training.
 
+## Stopping the loop
+
+Before starting each new experiment, check whether a file named `STOP` exists
+in the project directory:
+
+```python
+if os.path.exists("STOP"):
+    print("STOP file found — exiting loop cleanly.")
+    os.remove("STOP")
+    sys.exit(0)
+```
+
+To request an orderly stop from outside:
+```bash
+touch STOP          # loop finishes current experiment, then exits
+```
+
+Emergency stop: **Ctrl+C** in the Claude Code terminal.  This works but may
+leave an uncommitted change or a partial `results.tsv` entry — clean up before
+resuming.
+
 ## Experimentation loop
 
 LOOP FOREVER after initial setup:
 
-1. Read git state (current branch/commit).
-2. Modify `train.py` with one experimental idea.
-3. `git commit -am "brief description"`
-4. Run: `python train.py > run.log 2>&1`
-5. If training succeeds, evaluate: `python test.py >> run.log 2>&1`
-6. Read results: `grep "^test_monomer_recall\|^test_fdr\|^test_macro_f1\|^test_accuracy" run.log`
+1. **Check for STOP file** — if `STOP` exists, remove it and exit cleanly.
+2. Read git state (current branch/commit).
+3. Modify `train.py` with one experimental idea.
+4. `git commit -am "brief description"`
+5. Run: `python train.py > run.log 2>&1`
+6. If training succeeds, evaluate: `python test.py >> run.log 2>&1`
+7. Read results: `grep "^test_monomer_recall\|^test_fdr\|^test_macro_f1\|^test_accuracy" run.log`
    Also check for overfitting: `grep "^train_monomer_recall\|^train_fdr" run.log`
-7. If the grep is empty, the run crashed. `tail -50 run.log` and attempt a fix.
+8. If the grep is empty, the run crashed. `tail -50 run.log` and attempt a fix.
    If the idea is fundamentally broken, log `crash` and skip it.
-8. Log results to `results.tsv` (do NOT commit this file).
-9. If result is `keep`: advance the branch (keep the commit).
-10. If result is `discard`: `git reset --hard HEAD~1`.
+9. Log results to `results.tsv` (do NOT commit this file).
+10. If result is `keep`: advance the branch (keep the commit).
+11. If result is `discard`: `git reset --hard HEAD~1`.
 
 **Timeout**: if a run exceeds 20 minutes, kill it and treat as crash.
 
