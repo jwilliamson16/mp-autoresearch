@@ -45,7 +45,9 @@ PIXEL_SIZE_NM = 84.4
 FRAME_RATE    = 475.0
 SIM_N_FRAMES  = 1_000
 N_PARTICLES   = 80      # in simulation box; ~20 visible in FOV at any frame
-ROI_HALF      = 6       # edge exclusion margin in pixels
+ROI_HALF_MIN  = 3       # hard minimum edge margin — peaks closer than this to any
+                        # border are always excluded (prevents out-of-bounds reads).
+                        # train.py may use a larger margin; this is just the floor.
 
 # All species anchored in the bilayer — no MW-dependent diffusion.
 # D = 1.0 µm²/s from experimental observation.

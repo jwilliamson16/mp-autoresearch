@@ -29,15 +29,30 @@ from sklearn.preprocessing import StandardScaler
 
 from prepare import (
     load_dataset, match_to_gt, load_noise_frames,
-    CACHE_DIR, N_CLASSES, CLASS_NAMES, FOV_H, FOV_W, ROI_HALF,
+    CACHE_DIR, N_CLASSES, CLASS_NAMES, FOV_H, FOV_W, ROI_HALF_MIN,
 )
 
+# ── ROI size ──────────────────────────────────────────────────────────────────
+# Half-size of the region of interest in pixels.  ROI patch = (2*ROI_HALF+1)²
+# Affects:
+#   - edge exclusion margin (peaks within ROI_HALF of any border are skipped)
+#   - patch size for CNN/transformer input, if used
+#   - PEAK_SUM_R and NOISE_ANNULUS_* below, which are expressed relative to it
+# Must be >= ROI_HALF_MIN (={ROI_HALF_MIN}) — enforced at runtime.
+ROI_HALF = 6     # 13×13 patch
+
+# Feature extraction radii — expressed relative to ROI_HALF so they stay
+# sensible if ROI_HALF changes.  Adjust independently if needed.
+PEAK_SUM_R         = ROI_HALF - 2   # box half-size for peak_sum integral
+NOISE_ANNULUS_INNER = ROI_HALF      # inner radius of local-noise annulus
+NOISE_ANNULUS_OUTER = ROI_HALF + 4  # outer radius of local-noise annulus
+
 # ── peak detection parameters ─────────────────────────────────────────────────
-DOG_SIGMA_SMALL     = 1.0
-DOG_SIGMA_LARGE     = 1.6
-DOG_SIGMA_RATIO     = 1.6    # normalization factor
-THRESHOLD_FACTOR    = 3.0    # multiples of noise_level
-MIN_PEAK_DISTANCE   = 3      # minimum pixel separation between peaks
+DOG_SIGMA_SMALL   = 1.0
+DOG_SIGMA_LARGE   = 1.6
+DOG_SIGMA_RATIO   = 1.6    # normalization factor
+THRESHOLD_FACTOR  = 3.0    # multiples of noise_level
+MIN_PEAK_DISTANCE = 3      # minimum pixel separation between peaks
 
 # ── classifier parameters ─────────────────────────────────────────────────────
 N_ESTIMATORS   = 200
@@ -71,6 +86,7 @@ def pick_peaks(movie: np.ndarray, noise_level: float) -> pd.DataFrame:
         frame, y, x, contrast, peak_intensity, dog_response,
         peak_sum, snr, local_noise
     """
+    margin    = max(ROI_HALF, ROI_HALF_MIN)   # hard floor from prepare.py
     threshold = THRESHOLD_FACTOR * noise_level
     sf        = 1.0 / (DOG_SIGMA_RATIO - 1)
     T, H, W   = movie.shape
@@ -84,20 +100,21 @@ def pick_peaks(movie: np.ndarray, noise_level: float) -> pd.DataFrame:
         candidates = _find_local_maxima(dog, threshold, MIN_PEAK_DISTANCE)
 
         for yi, xi in candidates:
-            if not (ROI_HALF <= yi < H - ROI_HALF and
-                    ROI_HALF <= xi < W - ROI_HALF):
+            if not (margin <= yi < H - margin and
+                    margin <= xi < W - margin):
                 continue
 
             pixel_contrast = float(movie[t, yi, xi])
             peak_int       = float(inv[yi, xi])
             dog_resp       = float(dog[yi, xi])
 
-            r   = 4
+            r   = PEAK_SUM_R
             box = inv[max(0, yi - r): yi + r + 1,
                       max(0, xi - r): xi + r + 1]
             psum = float(np.maximum(box, 0.0).sum())
 
-            r_in, r_out = 6, 10
+            r_in  = NOISE_ANNULUS_INNER
+            r_out = NOISE_ANNULUS_OUTER
             ys = np.arange(max(0, yi - r_out), min(H, yi + r_out + 1))
             xs = np.arange(max(0, xi - r_out), min(W, xi + r_out + 1))
             yg, xg = np.meshgrid(ys, xs, indexing="ij")
