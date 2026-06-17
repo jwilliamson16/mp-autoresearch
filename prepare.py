@@ -43,7 +43,7 @@ FOV_H         = 59
 FOV_W         = 150
 PIXEL_SIZE_NM = 84.4
 FRAME_RATE    = 475.0
-SIM_N_FRAMES  = 10_000
+SIM_N_FRAMES  = 1_000
 N_PARTICLES   = 80      # in simulation box; ~20 visible in FOV at any frame
 ROI_HALF      = 6       # edge exclusion margin in pixels
 
