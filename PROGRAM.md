@@ -163,3 +163,9 @@ Starting ideas (not exhaustive — you should invent your own):
 - Cascaded classifier: first noise-vs-real, then species classification
 - Probability calibration + per-class decision thresholds optimized for FDR constraint
 - Contrast-based prior: use MW calibration to constrain class probabilities
+- **True null distribution**: `load_noise_frames()` returns clean empty-bilayer frames.
+  Run the peak picker on these frames — every detection is a guaranteed ghost peak.
+  Use these as noise-class training examples (label 0) in place of or alongside
+  unmatched detections from the simulation.  This gives the classifier a more
+  realistic noise class than simulation residuals.  See the commented block in
+  `Pipeline.fit()` for the hook.

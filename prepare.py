@@ -133,9 +133,16 @@ def generate() -> None:
     print(f"  Loaded {empty_frames.shape[0]} frames  "
           f"({empty_frames.shape[1]}×{empty_frames.shape[2]} px)")
 
-    mask          = select_clean_noise_frames(empty_frames)
-    noise_model   = ExperimentalNoise(empty_frames[mask])
+    mask        = select_clean_noise_frames(empty_frames)
+    clean       = empty_frames[mask]
+    noise_model = ExperimentalNoise(clean)
     print(f"  Noise model: {noise_model}")
+
+    # Save clean noise frames for null-distribution sampling in train.py
+    noise_frames_path = os.path.join(CACHE_DIR, "noise_frames.npy")
+    np.save(noise_frames_path, clean)
+    print(f"  Saved {len(clean)} clean noise frames → {noise_frames_path}  "
+          f"({clean.nbytes / 1e6:.0f} MB)")
 
     # Load calibration
     calib = load_calibration(MC_FILE)
@@ -190,6 +197,31 @@ def load_dataset(split: str) -> list[dict]:
             noise    = noise_level,
         ))
     return data
+
+
+# ── null distribution ─────────────────────────────────────────────────────────
+
+def load_noise_frames() -> np.ndarray:
+    """Load clean empty-bilayer contrast frames for null-distribution sampling.
+
+    Returns float32 array of shape (N_clean, H, W).
+
+    Any peak detected in these frames is a guaranteed ghost peak (true negative).
+    Use this to build a data-driven noise class for training:
+
+        noise_frames = load_noise_frames()
+        noise_picks  = pick_peaks_on_frames(noise_frames, ...)
+        # all noise_picks get label 0
+
+    This supplements or replaces the unmatched-detection noise class that
+    comes from running the peak picker on simulated movies.
+    """
+    path = os.path.join(CACHE_DIR, "noise_frames.npy")
+    if not os.path.exists(path):
+        sys.exit(f"ERROR: noise frames not found at {path}\nRun: python prepare.py")
+    frames = np.load(path)
+    print(f"Loaded noise frames: {frames.shape}  std={frames.std():.5f}")
+    return frames
 
 
 # ── matching ──────────────────────────────────────────────────────────────────
@@ -380,6 +412,9 @@ def main() -> None:
 
     if args.check:
         missing = []
+        nf = os.path.join(CACHE_DIR, "noise_frames.npy")
+        if not os.path.exists(nf):
+            missing.append(nf)
         for split in ("train", "test"):
             for sp in SIM_SPECIES:
                 for suffix in ("_movie.npy", "_gt.pkl", "_noise.npy"):

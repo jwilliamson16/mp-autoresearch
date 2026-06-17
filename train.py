@@ -22,7 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 from prepare import (
-    load_dataset, match_to_gt,
+    load_dataset, match_to_gt, load_noise_frames,
     CACHE_DIR, N_CLASSES, CLASS_NAMES, FOV_H, FOV_W, ROI_HALF,
 )
 
@@ -160,6 +160,21 @@ class Pipeline:
         """
         all_features = []
         all_labels   = []
+
+        # ── optional: true null distribution from empty bilayer ───────────────
+        # Peaks detected in the empty bilayer movie are guaranteed ghost peaks.
+        # Uncomment to supplement (or replace) the noise class from simulated
+        # unmatched detections.  The baseline does not use this.
+        #
+        # noise_frames = load_noise_frames()   # (N_clean, H, W)
+        # noise_movie_noise = noise_frames.std() * 1.4826
+        # noise_picks = pick_peaks(noise_frames, noise_movie_noise)
+        # if len(noise_picks):
+        #     feats  = noise_picks[FEATURE_COLS].values
+        #     valid  = np.all(np.isfinite(feats), axis=1)
+        #     all_features.append(feats[valid])
+        #     all_labels.append(np.zeros(valid.sum(), dtype=int))   # label 0 = noise
+        # ─────────────────────────────────────────────────────────────────────
 
         for entry in train_data:
             movie, gt_df, noise = entry["movie"], entry["gt"], entry["noise"]
