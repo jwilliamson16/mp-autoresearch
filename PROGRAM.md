@@ -59,11 +59,17 @@ more than 0.02.**  Everything else is `discard`.
 ## What you CAN do
 
 Modify `train.py` — this is the **only** file you edit.  Everything in it is fair game:
-- Peak detection method, thresholds, filter parameters
-- Feature engineering (what to compute per detected peak)
-- Classifier architecture and hyperparameters
+- Peak detection method, thresholds, filter parameters — **DoG is a starting point,
+  not a requirement**.  Replace with matched filter, LoG, template matching, learned
+  detector, or anything else.
+- Feature engineering — **FEATURE_COLS is not fixed**.  Add, remove, or replace features
+  entirely.  If you replace the peak picker, replace the features too.
+- Classifier architecture — **RF is a starting point**.  Replace with gradient boosting,
+  SVM, MLP, CNN over ROI patches, transformer, or anything else.
 - Data augmentation, class weighting, resampling
 - Post-processing: per-class thresholds, Platt scaling, FDR-controlled rejection
+
+The baseline (DoG + RF) reflects current lab practice, not a known optimum.
 
 ## What you CANNOT do
 

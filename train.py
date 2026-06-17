@@ -1,9 +1,15 @@
 """train.py — classification pipeline.
 
 This is the file the agent modifies.  Everything is fair game:
-  - Peak detection method and parameters
-  - Feature engineering
-  - Classifier architecture and hyperparameters
+  - Peak detection method and parameters (DoG is just a starting point)
+  - Feature set (FEATURE_COLS is not fixed — change or remove it entirely)
+  - Classifier architecture (RF is just a starting point)
+  - Training strategy, class weighting, post-processing
+
+The ONLY frozen contract is the predict() interface below.  The internals
+of pick_peaks(), extract_features(), Pipeline.fit(), and Pipeline.predict()
+can be completely replaced.  The baseline uses DoG + RF because that reflects
+current lab practice, not because it is optimal.
 
 Interface contract (frozen — test.py depends on this):
   Pipeline.predict(movie, noise_level) -> pd.DataFrame
