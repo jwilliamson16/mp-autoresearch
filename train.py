@@ -265,6 +265,13 @@ class Pipeline:
 # ── main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    # Register this script as 'train' in sys.modules so pickle serializes
+    # Pipeline as 'train.Pipeline' and test.py can deserialize it after
+    # `import train`.
+    import sys as _sys
+    _sys.modules.setdefault("train", _sys.modules["__main__"])
+    Pipeline.__module__ = "train"
+
     print("Loading training data …")
     train_data = load_dataset("train")
 

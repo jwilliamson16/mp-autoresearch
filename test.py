@@ -20,6 +20,7 @@ import pickle
 import sys
 
 from prepare import evaluate, CACHE_DIR
+import train  # noqa: F401 — Pipeline class must be importable for pickle.load
 
 
 def main() -> None:
