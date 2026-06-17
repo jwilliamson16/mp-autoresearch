@@ -1,0 +1,30 @@
+# Data cache — never commit, regenerate with prepare.py
+~/.cache/autoresearch-mp/
+data/
+
+# Experiment log — append-only, not tracked so resets don't wipe history
+results.tsv
+
+# Training artifacts
+pipeline.pkl
+run.log
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
