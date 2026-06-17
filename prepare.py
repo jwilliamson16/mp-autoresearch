@@ -47,15 +47,15 @@ SIM_N_FRAMES  = 10_000
 N_PARTICLES   = 80      # in simulation box; ~20 visible in FOV at any frame
 ROI_HALF      = 6       # edge exclusion margin in pixels
 
-# Diffusion coefficients (µm²/s) — TODO: replace with experimentally measured values
-# Approximate Saffman-Delbrück scaling relative to monomer
+# All species anchored in the bilayer — no MW-dependent diffusion.
+# D = 1.0 µm²/s from experimental observation.
 SIM_SPECIES = [
-    dict(label="monomer",  oligomer=1, mass_kda=55,  D_um2s=4.0),
-    dict(label="dimer",    oligomer=2, mass_kda=110, D_um2s=2.8),
-    dict(label="trimer",   oligomer=3, mass_kda=165, D_um2s=2.3),
-    dict(label="tetramer", oligomer=4, mass_kda=220, D_um2s=2.0),
-    dict(label="pentamer", oligomer=5, mass_kda=275, D_um2s=1.8),
-    dict(label="hexamer",  oligomer=6, mass_kda=330, D_um2s=1.6),
+    dict(label="monomer",  oligomer=1, mass_kda=55,  D_um2s=1.0),
+    dict(label="dimer",    oligomer=2, mass_kda=110, D_um2s=1.0),
+    dict(label="trimer",   oligomer=3, mass_kda=165, D_um2s=1.0),
+    dict(label="tetramer", oligomer=4, mass_kda=220, D_um2s=1.0),
+    dict(label="pentamer", oligomer=5, mass_kda=275, D_um2s=1.0),
+    dict(label="hexamer",  oligomer=6, mass_kda=330, D_um2s=1.0),
 ]
 
 CLASS_NAMES  = ["noise"] + [sp["label"] for sp in SIM_SPECIES]
@@ -243,8 +243,8 @@ def match_to_gt(
 
 # ── evaluation harness (frozen) ───────────────────────────────────────────────
 
-def evaluate(pipeline, verbose: bool = True) -> dict:
-    """Run pipeline on all test movies and compute classification metrics.
+def evaluate(pipeline, split: str = "test", verbose: bool = True) -> dict:
+    """Run pipeline on all movies in *split* and compute classification metrics.
 
     Parameters
     ----------
@@ -252,13 +252,16 @@ def evaluate(pipeline, verbose: bool = True) -> dict:
         Object with method predict(movie, noise_level) -> pd.DataFrame
         Required columns in prediction: frame (int), y, x, predicted_label (int)
         predicted_label: 0=noise, 1=monomer, ..., 6=hexamer
+    split:
+        "test" (default) — held-out data, never seen during training.
+        "train" — training data; useful as a diagnostic for overfitting.
 
     Returns
     -------
     dict with keys: monomer_recall, fdr, macro_f1, accuracy,
                     per_class_recall, per_class_precision, per_class_f1
     """
-    test_data = load_dataset("test")
+    test_data = load_dataset(split)
 
     # Accumulators: per class (0=noise, 1–6=species)
     tp = np.zeros(N_CLASSES, dtype=int)
@@ -341,9 +344,10 @@ def evaluate(pipeline, verbose: bool = True) -> dict:
     )
 
     if verbose:
-        print("\n" + "="*50)
-        print("Evaluation results")
-        print("="*50)
+        label = "TEST (decision metric)" if split == "test" else "TRAIN (diagnostic only)"
+        print("\n" + "="*55)
+        print(f"Evaluation — {label}")
+        print("="*55)
         print(f"{'Class':<12} {'Recall':>8} {'Prec':>8} {'F1':>8}")
         print("-"*40)
         for c in range(1, N_CLASSES):
@@ -356,11 +360,12 @@ def evaluate(pipeline, verbose: bool = True) -> dict:
         print(f"{'detections':<12} {n_total_det:>8d}")
         print(f"{'ghost peaks':<12} {n_ghost:>8d}")
         print()
-        # Machine-parseable summary lines (read by the experiment loop)
-        print(f"monomer_recall: {monomer_recall:.6f}")
-        print(f"fdr:            {fdr:.6f}")
-        print(f"macro_f1:       {macro_f1:.6f}")
-        print(f"accuracy:       {accuracy:.6f}")
+        # Machine-parseable summary lines (prefixed by split for grep)
+        prefix = split  # "test" or "train"
+        print(f"{prefix}_monomer_recall: {monomer_recall:.6f}")
+        print(f"{prefix}_fdr:            {fdr:.6f}")
+        print(f"{prefix}_macro_f1:       {macro_f1:.6f}")
+        print(f"{prefix}_accuracy:       {accuracy:.6f}")
 
     return metrics
 

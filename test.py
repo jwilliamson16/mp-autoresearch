@@ -2,6 +2,12 @@
 
 Frozen: do not modify.
 
+Evaluates the pipeline twice:
+  1. TRAIN split  — diagnostic; shows whether the pipeline fits training data.
+  2. TEST split   — decision metric; held-out data never seen during training.
+
+Keep/discard decisions are based on TEST metrics only.
+
 Usage
 -----
     python test.py                 # evaluate pipeline from CACHE_DIR/pipeline.pkl
@@ -32,7 +38,11 @@ def main() -> None:
     with open(pipeline_path, "rb") as f:
         pipeline = pickle.load(f)
 
-    evaluate(pipeline, verbose=True)
+    # Diagnostic: training data (seen during fitting)
+    evaluate(pipeline, split="train", verbose=True)
+
+    # Decision metric: held-out test data (never seen during training)
+    evaluate(pipeline, split="test", verbose=True)
 
 
 if __name__ == "__main__":
